@@ -1,0 +1,17 @@
+[project]
+name = "guardrails_weeek4"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = "==3.11.13"
+dependencies = [
+    "cryptography==44.0.3",
+    "guardrails-ai==0.6.6",
+    "jupyter>=1.1.1",
+    "nest-asyncio>=1.6.0",
+    "openai>=1.97.1",
+]
+
+[tool.uv]
+# Allow pre-release versions for all dependencies
+prerelease = "allow"

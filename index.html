@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Advanced RAG Chat Assistant</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      font-weight: 300;
+    }
+
+    .header p {
+      opacity: 0.9;
+      font-size: 1.1rem;
+    }
+
+    .status-bar {
+      background: #f8f9fa;
+      padding: 15px 30px;
+      border-bottom: 1px solid #e9ecef;
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #dc3545;
+      animation: pulse 2s infinite;
+    }
+
+    .status-indicator.connected {
+      background: #28a745;
+    }
+
+    .status-indicator.connecting {
+      background: #ffc107;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      min-height: 700px;
+    }
+
+    .section {
+      padding: 30px;
+      border-right: 1px solid #e9ecef;
+    }
+
+    .section:last-child {
+      border-right: none;
+    }
+
+    .section h2 {
+      color: #333;
+      margin-bottom: 20px;
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #555;
+      font-weight: 500;
+    }
+
+    textarea, input[type="text"] {
+      width: 100%;
+      padding: 15px;
+      border: 2px solid #e9ecef;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-family: inherit;
+      transition: all 0.3s ease;
+      background: #fff;
+    }
+
+    textarea:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid transparent;
+      border-top: 2px solid currentColor;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      display: none;
+    }
+
+    .btn.loading .spinner {
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .answer-container {
+      margin-top: 20px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 10px;
+      border-left: 4px solid #667eea;
+      min-height: 100px;
+    }
+
+    .answer-text {
+      white-space: pre-wrap;
+      line-height: 1.6;
+      color: #000;
+      font-style: normal;
+      font-weight: 400;
+    }
+
+    .empty-state {
+      color: #000;
+      font-style: normal;
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .success-message {
+      background: #d4edda;
+      color: #155724;
+      padding: 10px 15px;
+      border-radius: 5px;
+      margin-top: 10px;
+      display: none;
+    }
+
+    .error-message {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 10px 15px;
+      border-radius: 5px;
+      margin-top: 10px;
+      display: none;
+    }
+
+    .upload-section {
+      border-top: 1px solid #e9ecef;
+      padding-top: 20px;
+      margin-top: 20px;
+    }
+
+    .upload-section h3 {
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+
+    .file-input-container {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .file-input {
+      flex: 1;
+      padding: 10px;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      background: #fff;
+      font-size: 0.9rem;
+    }
+
+    .file-input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: #e9ecef;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 10px;
+      display: none;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    @media (max-width: 768px) {
+      .main-content {
+        grid-template-columns: 1fr;
+      }
+      
+      .section {
+        border-right: none;
+        border-bottom: 1px solid #e9ecef;
+      }
+      
+      .section:last-child {
+        border-bottom: none;
+      }
+      
+      .status-bar {
+        flex-direction: column;
+        gap: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎬 Advanced RAG Chat Assistant</h1>
+      <p>Powered by OpenAI GPT-4, Milvus Vector Database, and Video Processing</p>
+    </div>
+
+    <div class="status-bar">
+      <div class="status-item">
+        <div class="status-indicator" id="openai-status"></div>
+        <span>OpenAI API</span>
+      </div>
+      <div class="status-item">
+        <div class="status-indicator" id="milvus-status"></div>
+        <span>Milvus Database</span>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="section">
+        <h2>📚 Knowledge Base</h2>
+        
+        <!-- Text Input -->
+        <div class="input-group">
+          <label for="ingestText">Add text to the knowledge base:</label>
+          <textarea 
+            id="ingestText" 
+            placeholder="Enter text, documents, or information you want the AI to learn from..."
+          ></textarea>
+        </div>
+        <button id="ingestBtn" class="btn">
+          <span class="spinner"></span>
+          <span>Add Text</span>
+        </button>
+        <div id="ingestMessage" class="success-message"></div>
+        <div id="ingestError" class="error-message"></div>
+        
+        <!-- PDF Upload -->
+        <div class="upload-section">
+          <h3>📄 PDF Upload</h3>
+          <div class="file-input-container">
+            <input 
+              type="file" 
+              id="pdfFile" 
+              accept=".pdf"
+              class="file-input"
+            />
+            <button id="uploadPdfBtn" class="btn">
+              <span class="spinner"></span>
+              <span>Upload PDF</span>
+            </button>
+          </div>
+          <div id="pdfMessage" class="success-message"></div>
+          <div id="pdfError" class="error-message"></div>
+        </div>
+
+        <!-- Video Upload -->
+        <div class="upload-section">
+          <h3>🎥 Video Upload</h3>
+          <div class="file-input-container">
+            <input 
+              type="file" 
+              id="videoFile" 
+              accept=".mp4,.mov,.mkv"
+              class="file-input"
+            />
+            <button id="uploadVideoBtn" class="btn">
+              <span class="spinner"></span>
+              <span>Upload Video</span>
+            </button>
+          </div>
+          <div class="progress-bar" id="videoProgress">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <div id="videoMessage" class="success-message"></div>
+          <div id="videoError" class="error-message"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>💬 Chat Interface</h2>
+        <div class="input-group">
+          <label for="questionInput">Ask a question:</label>
+          <input 
+            id="questionInput" 
+            type="text" 
+            placeholder="What would you like to know?"
+          />
+        </div>
+        <button id="askBtn" class="btn">
+          <span class="spinner"></span>
+          <span>Ask Question</span>
+        </button>
+        <div class="answer-container">
+          <div id="answerDiv" class="answer-text empty-state">
+            Your answer will appear here...
+          </div>
+        </div>
+        <div id="askError" class="error-message"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      console.log("Advanced RAG Chat Assistant loaded");
+
+      // Status indicators
+      const openaiStatus = document.getElementById("openai-status");
+      const milvusStatus = document.getElementById("milvus-status");
+
+      // Check connection status on load
+      checkConnectionStatus();
+
+      async function checkConnectionStatus() {
+        try {
+          const response = await fetch("/health");
+          const data = await response.json();
+          
+          if (response.ok) {
+            openaiStatus.classList.add("connected");
+            milvusStatus.classList.add("connected");
+          } else {
+            openaiStatus.classList.add("connecting");
+            milvusStatus.classList.add("connecting");
+          }
+        } catch (error) {
+          console.error("Connection check failed:", error);
+          openaiStatus.classList.add("connecting");
+          milvusStatus.classList.add("connecting");
+        }
+      }
+
+      // Ingest functionality
+      const ingestBtn = document.getElementById("ingestBtn");
+      const ingestText = document.getElementById("ingestText");
+      const ingestMessage = document.getElementById("ingestMessage");
+      const ingestError = document.getElementById("ingestError");
+
+      ingestBtn.onclick = async () => {
+        const text = ingestText.value.trim();
+        
+        if (!text) {
+          showError(ingestError, "Please enter some text to add to the knowledge base.");
+          return;
+        }
+
+        setButtonLoading(ingestBtn, true);
+        hideMessages();
+
+        try {
+          const res = await fetch("/ingest", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text })
+          });
+
+          if (res.status === 204) {
+            showSuccess(ingestMessage, "✅ Successfully added to knowledge base!");
+            ingestText.value = "";
+          } else {
+            const errorData = await res.json();
+            showError(ingestError, `Failed to store: ${errorData.detail || 'Unknown error'}`);
+          }
+        } catch (error) {
+          showError(ingestError, "Network error. Please check your connection.");
+        } finally {
+          setButtonLoading(ingestBtn, false);
+        }
+      };
+
+      // PDF Upload functionality
+      const uploadPdfBtn = document.getElementById("uploadPdfBtn");
+      const pdfFile = document.getElementById("pdfFile");
+      const pdfMessage = document.getElementById("pdfMessage");
+      const pdfError = document.getElementById("pdfError");
+
+      uploadPdfBtn.onclick = async () => {
+        const file = pdfFile.files[0];
+        
+        if (!file) {
+          showError(pdfError, "Please select a PDF file to upload.");
+          return;
+        }
+
+        if (!file.name.toLowerCase().endsWith('.pdf')) {
+          showError(pdfError, "Please select a valid PDF file.");
+          return;
+        }
+
+        setButtonLoading(uploadPdfBtn, true);
+        hideMessages();
+
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+
+          const res = await fetch("/upload-pdf", {
+            method: "POST",
+            body: formData
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            showSuccess(pdfMessage, `✅ Successfully processed PDF: ${data.message} (${data.pages} pages)`);
+            pdfFile.value = "";
+          } else {
+            const errorData = await res.json();
+            showError(pdfError, `Failed to process PDF: ${errorData.detail || 'Unknown error'}`);
+          }
+        } catch (error) {
+          showError(pdfError, "Network error. Please check your connection.");
+        } finally {
+          setButtonLoading(uploadPdfBtn, false);
+        }
+      };
+
+      // Video Upload functionality
+      const uploadVideoBtn = document.getElementById("uploadVideoBtn");
+      const videoFile = document.getElementById("videoFile");
+      const videoMessage = document.getElementById("videoMessage");
+      const videoError = document.getElementById("videoError");
+      const videoProgress = document.getElementById("videoProgress");
+      const progressFill = document.getElementById("progressFill");
+
+      uploadVideoBtn.onclick = async () => {
+        const file = videoFile.files[0];
+        
+        if (!file) {
+          showError(videoError, "Please select a video file to upload.");
+          return;
+        }
+
+        const validExtensions = ['.mp4', '.mov', '.mkv'];
+        const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+        
+        if (!validExtensions.includes(fileExtension)) {
+          showError(videoError, "Please select a valid video file (MP4, MOV, or MKV).");
+          return;
+        }
+
+        setButtonLoading(uploadVideoBtn, true);
+        hideMessages();
+        videoProgress.style.display = "block";
+        progressFill.style.width = "0%";
+
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+
+          // Simulate progress
+          const progressInterval = setInterval(() => {
+            const currentWidth = parseInt(progressFill.style.width) || 0;
+            if (currentWidth < 90) {
+              progressFill.style.width = (currentWidth + 10) + "%";
+            }
+          }, 500);
+
+          const res = await fetch("/upload-video", {
+            method: "POST",
+            body: formData
+          });
+
+          clearInterval(progressInterval);
+          progressFill.style.width = "100%";
+
+          if (res.ok) {
+            const data = await res.json();
+            showSuccess(videoMessage, `✅ Successfully processed video: ${data.message} (${data.length} characters transcribed)`);
+            videoFile.value = "";
+          } else {
+            const errorData = await res.json();
+            showError(videoError, `Failed to process video: ${errorData.detail || 'Unknown error'}`);
+          }
+        } catch (error) {
+          showError(videoError, "Network error. Please check your connection.");
+        } finally {
+          setButtonLoading(uploadVideoBtn, false);
+          setTimeout(() => {
+            videoProgress.style.display = "none";
+            progressFill.style.width = "0%";
+          }, 1000);
+        }
+      };
+
+      // Ask functionality
+      const askBtn = document.getElementById("askBtn");
+      const questionInput = document.getElementById("questionInput");
+      const answerDiv = document.getElementById("answerDiv");
+      const askError = document.getElementById("askError");
+
+      askBtn.onclick = async () => {
+        const question = questionInput.value.trim();
+        
+        if (!question) {
+          showError(askError, "Please enter a question.");
+          return;
+        }
+
+        setButtonLoading(askBtn, true);
+        hideMessages();
+        answerDiv.innerHTML = '<div style="text-align: center; color: #6c757d;">🤔 Thinking...</div>';
+
+        try {
+          const res = await fetch("/ask", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question })
+          });
+
+          if (res.ok) {
+            const { answer } = await res.json();
+            answerDiv.textContent = answer;
+          } else {
+            const errorData = await res.json();
+            showError(askError, `Failed to get answer: ${errorData.detail || 'Unknown error'}`);
+            answerDiv.innerHTML = '<div class="empty-state">Unable to get answer</div>';
+          }
+        } catch (error) {
+          showError(askError, "Network error. Please check your connection.");
+          answerDiv.innerHTML = '<div class="empty-state">Connection error</div>';
+        } finally {
+          setButtonLoading(askBtn, false);
+        }
+      };
+
+      // Enter key support
+      questionInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          askBtn.click();
+        }
+      });
+
+      ingestText.addEventListener("keypress", (e) => {
+        if (e.key === "Enter" && e.ctrlKey) {
+          ingestBtn.click();
+        }
+      });
+
+      // Utility functions
+      function setButtonLoading(button, loading) {
+        if (loading) {
+          button.classList.add("loading");
+          button.disabled = true;
+        } else {
+          button.classList.remove("loading");
+          button.disabled = false;
+        }
+      }
+
+      function showSuccess(element, message) {
+        element.textContent = message;
+        element.style.display = "block";
+        setTimeout(() => {
+          element.style.display = "none";
+        }, 5000);
+      }
+
+      function showError(element, message) {
+        element.textContent = message;
+        element.style.display = "block";
+        setTimeout(() => {
+          element.style.display = "none";
+        }, 8000);
+      }
+
+      function hideMessages() {
+        ingestMessage.style.display = "none";
+        ingestError.style.display = "none";
+        pdfMessage.style.display = "none";
+        pdfError.style.display = "none";
+        videoMessage.style.display = "none";
+        videoError.style.display = "none";
+        askError.style.display = "none";
+      }
+    });
+  </script>
+</body>
+</html> 
